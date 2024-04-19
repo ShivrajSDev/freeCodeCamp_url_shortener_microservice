@@ -27,7 +27,7 @@ let shortenedUrlSchema = mongoose.Schema({
 
 shortenedURL = mongoose.model('ShortenedURL', shortenedUrlSchema);
 
-const findExisting = function(req, res, next) {
+const findExisting = function(req, res, next) { 
   shortenedURL.findOne({"original_url": req.body.url}).exec(function(err, result) {
     if(err) {
       res.json({error: err});
@@ -45,27 +45,25 @@ const findExisting = function(req, res, next) {
 }
 
 const addNewRecord = function(req, res) {
-  shortenedURL.count().exec(function(err, data) {
+  shortenedURL.find().sort({short_url: -1}).limit(1).exec(function(err, data) {
     if(err) {
       res.json({error: err});
     } else {
-      if(data) {
-        let newShortenedUrl = shortenedURL({
-          original_url: req.body.url,
-          short_url: data + 1
-        });
+      let newShortenedUrl = shortenedURL({
+        original_url: req.body.url,
+        short_url: data.length > 0 ? data[0].short_url + 1 : 1
+      });
 
-        newShortenedUrl.save(function(err, data) {
-          if(err) {
-            res.json({error: err});
-          } else {
-            res.json({
-              original_url: data.original_url,
-              short_url: data.short_url
-            });
-          }
-        });
-      }
+      newShortenedUrl.save(function(err, data) {
+        if(err) {
+          res.json({error: err});
+        } else {
+          res.json({
+            original_url: data.original_url,
+            short_url: data.short_url
+          });
+        }
+      });
     }
   });
 }
