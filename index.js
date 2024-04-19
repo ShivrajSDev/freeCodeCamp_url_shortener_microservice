@@ -1,4 +1,7 @@
 require('dotenv').config();
+let mongoose = require('mongoose');
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+
 const express = require('express');
 const cors = require('cors');
 const dns = require('dns');
@@ -8,6 +11,22 @@ const app = express();
 // Basic Configuration
 const port = process.env.PORT || 3000;
 
+let shortenedURL;
+
+let shortenedUrlSchema = mongoose.Schema({
+  original_url: {
+    type: String,
+    unique: true
+  },
+  short_url: {
+    type: Number,
+    required: true,
+    unique: true
+  }
+});
+
+shortenedURL = mongoose.model('ShortenedURL', shortenedUrlSchema);
+
 app.use(cors());
 
 app.use(bodyParser.urlencoded({extended:false}));
@@ -16,11 +35,6 @@ app.use('/public', express.static(`${process.cwd()}/public`));
 
 app.get('/', function(req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
-});
-
-// Your first API endpoint
-app.get('/api/hello', function(req, res) {
-  res.json({ greeting: 'hello API' });
 });
 
 app.get('/api/shorturl/:id', function(req, res) {
@@ -37,7 +51,7 @@ app.post('/api/shorturl', function(req, res, next) {
       if(err) {
         res.json({error: "Invalid URL"});
       } else {
-        req.originalurl = req.body.url;
+        req.fullUrl = req.body.url;
         next();
       }
     });
@@ -45,10 +59,46 @@ app.post('/api/shorturl', function(req, res, next) {
     res.json({error: "Invalid URL"});
   }
 }, function (req, res) {
-  res.json({
-    original_url: req.originalurl,
-    short_url: 1
-  });
+  shortenedURL.findOne({"original_url": req.fullUrl})
+    .exec(function(err, data) {
+      if(err) {
+        res.json({error: err});
+      } else {
+        console.log(data);
+        if(data) {
+          //res.json({post: "result"});
+          res.json({
+            original_url: data.original_url,
+            short_url: data.short_url
+          });
+        } else {
+          let counter;
+          shortenedURL.count()
+            .exec(function(err, data) {
+              if(err) {
+                res.json({error: err});
+            } else {
+              counter = data + 1;
+              let newShortenedUrl = shortenedURL({
+                original_url: req.fullUrl,
+                short_url: counter
+              });
+              newShortenedUrl.save(function(err, data) {
+                if(err) {
+                  res.json({error: err});
+                } else {
+                  console.log(data);
+                  res.json({
+                    original_url: data.original_url,
+                    short_url: data.short_url
+                  });
+                }
+              })
+            }
+          });
+        }
+      }
+    });
 });
 
 app.listen(port, function() {
