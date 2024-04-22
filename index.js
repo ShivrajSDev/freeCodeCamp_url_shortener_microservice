@@ -79,7 +79,19 @@ app.get('/', function(req, res) {
 });
 
 app.get('/api/shorturl/:id', function(req, res) {
-    res.json({test: "get"});
+  shortenedURL.findOne({"short_url": req.params.id}, function(err, result) {
+    if(err) {
+      res.json({error: err});
+    } else {
+      if(result) {
+        res.writeHead(301, {
+          Location: result.original_url
+        }).end();
+      } else {
+        res.json({error: "No short URL found for the given input"});
+      }
+    }
+  });
 });
 
 app.post('/api/shorturl', function(req, res, next) {
