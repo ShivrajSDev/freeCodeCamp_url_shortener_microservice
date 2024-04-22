@@ -11,9 +11,9 @@ const app = express();
 // Basic Configuration
 const port = process.env.PORT || 3000;
 
-let shortenedURL;
+let shortURL;
 
-let shortenedUrlSchema = mongoose.Schema({
+let shortUrlSchema = mongoose.Schema({
   original_url: {
     type: String,
     unique: true
@@ -25,10 +25,13 @@ let shortenedUrlSchema = mongoose.Schema({
   }
 });
 
-shortenedURL = mongoose.model('ShortenedURL', shortenedUrlSchema);
+shortURL = mongoose.model('ShortURL', shortUrlSchema);
 
-const findExisting = function(req, res, next) { 
-  shortenedURL.findOne({"original_url": req.body.url}).exec(function(err, result) {
+// Checks to see if an existing entry exists for the given URL.
+// If so, return the entry's details.
+// Otherwise, proceed to save a new entry in the database.
+const findExistingEntry = function(req, res, next) { 
+  shortURL.findOne({"original_url": req.body.url}).exec(function(err, result) {
     if(err) {
       res.json({error: err});
     } else {
@@ -44,17 +47,19 @@ const findExisting = function(req, res, next) {
   }); 
 }
 
-const addNewRecord = function(req, res) {
-  shortenedURL.find().sort({short_url: -1}).limit(1).exec(function(err, data) {
+// Saves a new entry in the database and returns that entry's details
+// to the user if it was saved successfully.
+const addNewEntry = function(req, res) {
+  shortURL.find().sort({short_url: -1}).limit(1).exec(function(err, data) {
     if(err) {
       res.json({error: err});
     } else {
-      let newShortenedUrl = shortenedURL({
+      let newShortUrl = shortURL({
         original_url: req.body.url,
         short_url: data.length > 0 ? data[0].short_url + 1 : 1
       });
 
-      newShortenedUrl.save(function(err, data) {
+      newShortUrl.save(function(err, data) {
         if(err) {
           res.json({error: err});
         } else {
@@ -78,11 +83,16 @@ app.get('/', function(req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
+// GET API method to retrieve an existing entry from the database based on a
+// given id.
+// If found, redirect to the saved entry's URL.
+// Otherwise, notify user that no such entry exists.
 app.get('/api/shorturl/:id', function(req, res) {
-  shortenedURL.findOne({"short_url": req.params.id}, function(err, result) {
+  shortURL.findOne({"short_url": req.params.id}).exec(function(err, result) {
     if(err) {
       res.json({error: err});
     } else {
+      console.log(req.params.id);
       if(result) {
         res.writeHead(301, {
           Location: result.original_url
@@ -94,12 +104,14 @@ app.get('/api/shorturl/:id', function(req, res) {
   });
 });
 
+// POST API method to save the specified URL in the database, or otherwise retrieve its details
+// if it was saved previously.
+// The first step of the process involves first validating the URL's hostname using dns.lookup.
+// The provided URL must also follow the valid HTTP format (e.g. http://www.example.com).
 app.post('/api/shorturl', function(req, res, next) {
   const urlRegex = new RegExp('^https?:\/\/');
-
   if(urlRegex.exec(req.body.url)){
     let urlObject = new URL(req.body.url);
-    console.log(req.body.url);
 
     dns.lookup(urlObject.hostname, (err) => {
       if(err) {
@@ -111,7 +123,7 @@ app.post('/api/shorturl', function(req, res, next) {
   } else {
     res.json({error: "Invalid URL"});
   }
-}, findExisting, addNewRecord);
+}, findExistingEntry, addNewEntry);
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
