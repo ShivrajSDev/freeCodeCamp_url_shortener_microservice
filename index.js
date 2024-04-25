@@ -1,6 +1,14 @@
 require('dotenv').config();
 let mongoose = require('mongoose');
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+
+const uri = process.env.MONGODB_URI
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then((() => {
+    console.log('Connection successful');
+  })).catch((e) => {
+    console.log('Connetion failed');
+    console.error(e);
+  });
 
 const express = require('express');
 const cors = require('cors');
@@ -77,10 +85,10 @@ app.use(cors());
 
 app.use(bodyParser.urlencoded({extended:false}));
 
-app.use('/public', express.static(`${process.cwd()}/public`));
+app.use(express.static('public'));
 
 app.get('/', function(req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+  res.sendFile(__dirname + '/views/index.html');
 });
 
 // GET API method to retrieve an existing entry from the database based on a
