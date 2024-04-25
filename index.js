@@ -85,10 +85,10 @@ app.use(cors());
 
 app.use(bodyParser.urlencoded({extended:false}));
 
-app.use('/public', express.static(`${process.cwd()}/public`));
+app.use(express.static('public'));
 
 app.get('/', function(req, res) {
-  res.sendFile(process.cwd() + '/views/index.html');
+  res.sendFile(__dirname + '/views/index.html');
 });
 
 // GET API method to retrieve an existing entry from the database based on a
@@ -136,5 +136,3 @@ app.post('/api/shorturl', function(req, res, next) {
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
 });
-
-module.exports = app;
