@@ -1,6 +1,14 @@
 require('dotenv').config();
 let mongoose = require('mongoose');
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+
+const uri = process.env.MONGODB_URI
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then((() => {
+    console.log('Connection successful');
+  })).catch((e) => {
+    console.log('Connetion failed');
+    console.error(e);
+  });
 
 const express = require('express');
 const cors = require('cors');
@@ -128,5 +136,3 @@ app.post('/api/shorturl', function(req, res, next) {
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
 });
-
-modules.exports = app;
