@@ -136,3 +136,5 @@ app.post('/api/shorturl', function(req, res, next) {
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
 });
+
+module.exports = app;
